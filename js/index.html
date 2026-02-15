@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<title>Invoice - CakeNook</title>
+
+<!-- jsPDF + html2canvas -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #f5f5f5;
+  padding: 20px;
+}
+
+.invoice-box {
+  width: 800px;
+  margin: auto;
+  background: #fff;
+  padding: 25px;
+  border: 1px solid #ddd;
+  color: #000;
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.invoice-title {
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.company-logo {
+  width: 80px;
+  height: 80px;
+  border: 2px solid #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+.details {
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+.company-info {
+  margin-top: 15px;
+  font-size: 14px;
+}
+
+.bill-to {
+  margin-top: 20px;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+  font-size: 14px;
+}
+
+table th, table td {
+  border: 1px solid #000;
+  padding: 6px;
+  text-align: center;
+}
+
+table th:nth-child(2),
+table td:nth-child(2) {
+  text-align: left;
+}
+
+.summary-box {
+  width: 250px;
+  float: right;
+  margin-top: 10px;
+}
+
+.summary-box table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.summary-box td {
+  border: 1px solid #000;
+  padding: 6px;
+  font-size: 14px;
+}
+
+.notes {
+  margin-top: 60px;
+  font-size: 13px;
+}
+
+.signature {
+  margin-top: 40px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.signature-box {
+  text-align: right;
+  font-size: 14px;
+}
+
+.signature-line {
+  margin-top: 40px;
+  border-top: 1px solid #000;
+  width: 200px;
+  margin-left: auto;
+}
+
+button {
+  margin: 20px auto;
+  display: block;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+}
+</style>
+</head>
+<body>
+
+<div id="invoice" class="invoice-box">
+
+  <!-- HEADER -->
+  <div class="top">
+    <div>
+      <div class="invoice-title">INVOICE</div>
+      <div class="details">
+        Invoice Number: <span id="invNo"></span><br>
+        Invoice Date: <span id="invDate"></span><br>
+        Order ID: <span id="orderId"></span>
+      </div>
+    </div>
+
+    <div class="company-logo">LOGO</div>
+  </div>
+
+  <!-- COMPANY INFO -->
+  <div class="company-info">
+    <b>CAKE NOOK</b><br>
+    1st Floor, Malappuram, Kerala - 676528<br>
+    Phone: 9876543210<br>
+    Email: cakenook@gmail.com<br>
+    GST NO: 32XXXXXXXXXXX
+  </div>
+
+  <!-- BILL TO -->
+  <div class="bill-to">
+    BILL TO:<br>
+    <span id="customerName"></span><br>
+    <span id="customerAddress"></span><br>
+    Mobile: <span id="customerPhone"></span>
+  </div>
+
+  <!-- TABLE -->
+  <table>
+    <thead>
+      <tr>
+        <th>SR No</th>
+        <th>Item & Description</th>
+        <th>Unit Price</th>
+        <th>Qty</th>
+        <th>Amount</th>
+      </tr>
+    </thead>
+    <tbody id="itemsTable"></tbody>
+  </table>
+
+  <!-- TOTAL BOX -->
+  <div class="summary-box">
+    <table>
+      <tr>
+        <td>Sub-Total</td>
+        <td id="subTotal">₹0</td>
+      </tr>
+      <tr>
+        <td>CGST @ 9%</td>
+        <td id="cgst">₹0</td>
+      </tr>
+      <tr>
+        <td>SGST @ 9%</td>
+        <td id="sgst">₹0</td>
+      </tr>
+      <tr>
+        <td><b>Total</b></td>
+        <td><b id="grandTotal">₹0</b></td>
+      </tr>
+    </table>
+  </div>
+
+  <div style="clear: both;"></div>
+
+  <!-- NOTES -->
+  <div class="notes">
+    TOTAL AMOUNT IN WORDS:<br>
+    <span id="amountWords">Rupees Zero Only</span>
+  </div>
+
+  <!-- SIGNATURE -->
+  <div class="signature">
+    <div></div>
+    <div class="signature-box">
+      SEAL & SIGNATURE<br>
+      Cake Nook
+      <div class="signature-line"></div>
+    </div>
+  </div>
+
+</div>
+
+<button onclick="downloadPDF()">Download PDF</button>
+
+<script>
+// SAMPLE ORDER DATA
+const order = {
+  orderid: "ORD-101",
+  date: "2026-02-10",
+  customer: {
+    name: "Sharath KP",
+    address: "Malappuram, Kerala",
+    phone: "9999999999"
+  },
+  items: [
+    { name: "Chocolate Cake", price: 500, qty: 2 },
+    { name: "Black Forest Cake", price: 700, qty: 1 }
+  ]
+};
+
+// Fill invoice data
+document.getElementById("invNo").innerText = "INV-" + order.orderid;
+document.getElementById("invDate").innerText = new Date(order.date).toLocaleDateString();
+document.getElementById("orderId").innerText = order.orderid;
+
+document.getElementById("customerName").innerText = order.customer.name;
+document.getElementById("customerAddress").innerText = order.customer.address;
+document.getElementById("customerPhone").innerText = order.customer.phone;
+
+// Add items
+let subTotal = 0;
+const table = document.getElementById("itemsTable");
+
+order.items.forEach((item, index) => {
+  const amount = item.price * item.qty;
+  subTotal += amount;
+
+  const row = `
+    <tr>
+      <td>${index + 1}</td>
+      <td>${item.name}</td>
+      <td>₹${item.price}</td>
+      <td>${item.qty}</td>
+      <td>₹${amount}</td>
+    </tr>
+  `;
+  table.innerHTML += row;
+});
+
+// GST Calculation
+const cgst = subTotal * 0.09;
+const sgst = subTotal * 0.09;
+const total = subTotal + cgst + sgst;
+
+// Show totals
+document.getElementById("subTotal").innerText = "₹" + subTotal.toFixed(2);
+document.getElementById("cgst").innerText = "₹" + cgst.toFixed(2);
+document.getElementById("sgst").innerText = "₹" + sgst.toFixed(2);
+document.getElementById("grandTotal").innerText = "₹" + total.toFixed(2);
+
+// Amount in words (simple)
+function numberToWords(num) {
+  return "Rupees " + Math.round(num) + " Only";
+}
+document.getElementById("amountWords").innerText = numberToWords(total);
+
+// PDF Download
+async function downloadPDF() {
+  const { jsPDF } = window.jspdf;
+  const invoice = document.getElementById("invoice");
+
+  const canvas = await html2canvas(invoice, {
+    scale: 2,
+    useCORS: true,
+    backgroundColor: "#ffffff"
+  });
+
+  const imgData = canvas.toDataURL("image/png");
+
+  const pdf = new jsPDF("p", "mm", "a4");
+  const imgWidth = 210;
+  const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+  pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+  pdf.save(`CakeNook_Invoice_${order.orderid}.pdf`);
+}
+</script>
+
+</body>
+</html>
